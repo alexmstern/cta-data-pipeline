@@ -52,8 +52,9 @@ def fetch_positions(api_key: str) -> list[dict]:
 
 def insert_positions(conn, trains: list[dict], polled_at: datetime) -> None:
     """Insert a batch of train positions into the train_positions table."""
-    rows = [
-        (
+    rows = []
+    for train in trains:
+        rows.append((
             train["rn"],
             train["_line"],
             train["trDr"],
@@ -65,13 +66,12 @@ def insert_positions(conn, trains: list[dict], polled_at: datetime) -> None:
             train["arrT"],
             int(train["isApp"]),
             int(train["isDly"]),
-            float(train["lat"]) if train.get("lat") else None,
-            float(train["lon"]) if train.get("lon") else None,
+            # Records without GPS info will have lat/lon of "0", which we convert to NULL
+            float(train["lat"]) if train.get("lat") and train.get("lat") != "0" else None,
+            float(train["lon"]) if train.get("lon") and train.get("lon") != "0" else None,
             int(train["heading"]) if train.get("heading") else None,
             polled_at,
-        )
-        for train in trains
-    ]
+        ))
     conn.executemany(
         """
         INSERT INTO train_positions (
